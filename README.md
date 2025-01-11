@@ -39,28 +39,29 @@ export default App;
 
 ### Props
 
-| Prop               | Type                    | Default      | Description                                                                |
-| ------------------ | ----------------------- | ------------ | -------------------------------------------------------------------------- |
-| `src`              | `string`                | **Required** | The source URL of the image.                                               |
-| `className`        | `string`                | `undefined`  | Custom CSS class for the component.                                        |
-| `alt`              | `string`                | `'image'`    | Alt text for the image.                                                    |
-| `style`            | `CSSProperties`         | `{}`         | Inline styles for the image.                                               |
-| `background`       | `boolean`               | `false`      | Whether the image is used as a background.                                 |
-| `lazy`             | `boolean`               | `true`       | Enables lazy loading for the image.                                        |
-| `width`            | `number`                | `undefined`  | Width of the image in pixels.                                              |
-| `height`           | `number`                | `undefined`  | Height of the image in pixels.                                             |
-| `quality`          | `number`                | `undefined`  | Image quality for compression (if applicable).                             |
-| `userId`           | `string`                | `undefined`  | ID of the user who owns the image (used in dynamic image paths).           |
-| `avif`             | `boolean`               | `true`       | Whether to generate an AVIF source for the image.                          |
-| `webp`             | `boolean`               | `true`       | Whether to generate a WebP source for the image.                           |
-| `mimeType`         | `string`                | `'jpeg'`     | MIME type of the image (e.g., 'jpeg', 'png').                              |
-| `direct`           | `boolean`               | `false`      | Loads the image directly without generating multiple formats.              |
-| `loader`           | `boolean`               | `true`       | Displays a skeleton loader while the image is loading.                     |
-| `dynamicDimension` | `boolean`               | `false`      | Dynamically adjusts dimensions based on the `width` and `height` provided. |
-| `folder`           | `'public' \| 'private'` | `'public'`   | Specifies whether the image is in a public or private folder.              |
-| `type`             | `'normal' \| 'avatar'`  | `'normal'`   | Specifies the type of image (e.g., normal image or avatar).                |
+| Prop               | Type                    | Default               | Description                                                                |
+| ------------------ | ----------------------- | --------------------- | -------------------------------------------------------------------------- |
+| `src`              | `string`                | **Required**          | The source URL of the image.                                               |
+| `className`        | `string`                | `undefined`           | Custom CSS class for the component.                                        |
+| `alt`              | `string`                | `'image'`             | Alt text for the image.                                                    |
+| `style`            | `CSSProperties`         | `{}`                  | Inline styles for the image.                                               |
+| `background`       | `boolean`               | `false`               | Whether the image is used as a background.                                 |
+| `lazy`             | `boolean`               | `true`                | Enables lazy loading for the image.                                        |
+| `width`            | `number`                | `undefined`           | Width of the image in pixels.                                              |
+| `height`           | `number`                | `undefined`           | Height of the image in pixels.                                             |
+| `quality`          | `number`                | `undefined`           | Image quality for compression (if applicable).                             |
+| `userId`           | `string`                | `undefined`           | ID of the user who owns the image (used in dynamic image paths).           |
+| `avif`             | `boolean`               | `true`                | Whether to generate an AVIF source for the image.                          |
+| `webp`             | `boolean`               | `true`                | Whether to generate a WebP source for the image.                           |
+| `mimeType`         | `string`                | `'jpeg'`              | MIME type of the image (e.g., 'jpeg', 'png').                              |
+| `direct`           | `boolean`               | `false`               | Loads the image directly without generating multiple formats.              |
+| `loader`           | `boolean`               | `true`                | Displays a skeleton loader while the image is loading.                     |
+| `dynamicDimension` | `boolean`               | `false`               | Dynamically adjusts dimensions based on the `width` and `height` provided. |
+| `backendUrl`       | `string`                | `/api/v1/pixel/serve` | The backend URL for the image.                                             |
+| `folder`           | `'public' \| 'private'` | `'public'`            | Specifies whether the image is in a public or private folder.              |
+| `type`             | `'normal' \| 'avatar'`  | `'normal'`            | Specifies the type of image (e.g., normal image or avatar).                |
 
-### Advanced Example
+### Other Examples
 
 Using `Pixel Serve` as a background image:
 
