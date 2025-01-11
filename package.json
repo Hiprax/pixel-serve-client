@@ -9,6 +9,10 @@
   "scripts": {
     "build": "tsup"
   },
+  "files": [
+    "dist",
+    "dist/assets"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Hiprax/pixel-serve-client.git"
@@ -45,6 +49,7 @@
     "tsx": "^4.19.2"
   },
   "devDependencies": {
+    "@types/node": "^22.10.5",
     "@types/react": "^19.0.4",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3"

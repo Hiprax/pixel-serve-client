@@ -4,16 +4,16 @@ import type { PixelProps } from "../types";
 import Skeleton from "./Skeleton";
 import { srcGenerator, getMimeType } from "../functions";
 
-const NotFoundAvif = "../assets/noimage.avif";
-const NotFoundWebp = "../assets/noimage.webp";
-const NotFoundJpg = "../assets/noimage.jpg";
+const NotFoundAvif = new URL("../assets/noimage.avif", import.meta.url).href;
+const NotFoundWebp = new URL("../assets/noimage.webp", import.meta.url).href;
+const NotFoundJpg = new URL("../assets/noimage.jpg", import.meta.url).href;
 
-const NoAvatarAvif = "../assets/noavatar.avif";
-const NoAvatarWebp = "../assets/noavatar.webp";
-const NoAvatarPng = "../assets/noavatar.png";
+const NoAvatarAvif = new URL("../assets/noavatar.avif", import.meta.url).href;
+const NoAvatarWebp = new URL("../assets/noavatar.webp", import.meta.url).href;
+const NoAvatarPng = new URL("../assets/noavatar.png", import.meta.url).href;
 
 /**
- * CustomImage component for displaying images with support for multiple formats and lazy loading.
+ * Pixel component for displaying images with support for multiple formats and lazy loading.
  *
  * @component
  * @param {Object} props - Component props.
