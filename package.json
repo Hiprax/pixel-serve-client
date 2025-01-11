@@ -1,11 +1,10 @@
 {
   "name": "pixel-serve-client",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "The `Pixel Serve` component is a powerful and flexible React component designed to handle dynamic image rendering with support for multiple formats, lazy loading, and additional customization options.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "type": "module",
   "scripts": {
     "build": "tsup"
   },
@@ -37,15 +36,10 @@
   },
   "homepage": "https://github.com/Hiprax/pixel-serve-client#readme",
   "dependencies": {
+    "@babel/runtime": "^7.26.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "react": "^19.0.0",
-    "tsx": "^4.19.2"
-  },
-  "peerDependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "react": "^19.0.0",
+    "react": ">=16.9.0",
     "tsx": "^4.19.2"
   },
   "devDependencies": {
@@ -53,5 +47,11 @@
     "@types/react": "^19.0.4",
     "tsup": "^8.3.5",
     "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "react": ">=16.9.0"
+  },
+  "engines": {
+    "node": ">=8.x"
   }
 }
