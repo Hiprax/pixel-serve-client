@@ -1,6 +1,6 @@
 {
   "name": "pixel-serve-client",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "The `Pixel Serve` component is a powerful and flexible React component designed to handle dynamic image rendering with support for multiple formats, lazy loading, and additional customization options.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
