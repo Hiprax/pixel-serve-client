@@ -4,13 +4,13 @@ import type { PixelProps } from "../types";
 import Skeleton from "./Skeleton";
 import { srcGenerator, getMimeType } from "../functions";
 
-const NotFoundAvif = new URL("../assets/noimage.avif", import.meta.url).href;
-const NotFoundWebp = new URL("../assets/noimage.webp", import.meta.url).href;
-const NotFoundJpg = new URL("../assets/noimage.jpg", import.meta.url).href;
-
-const NoAvatarAvif = new URL("../assets/noavatar.avif", import.meta.url).href;
-const NoAvatarWebp = new URL("../assets/noavatar.webp", import.meta.url).href;
-const NoAvatarPng = new URL("../assets/noavatar.png", import.meta.url).href;
+// Import fallback images directly
+import noimageAvif from "../assets/noimage.avif";
+import noimageWebp from "../assets/noimage.webp";
+import noimageJpg from "../assets/noimage.jpg";
+import noavatarAvif from "../assets/noavatar.avif";
+import noavatarWebp from "../assets/noavatar.webp";
+import noavatarPng from "../assets/noavatar.png";
 
 /**
  * Pixel component for displaying images with support for multiple formats and lazy loading.
@@ -151,18 +151,18 @@ const Pixel = memo(
               const placeholderSrcSet: { src: string; type: string }[] = [];
               if (avif) {
                 placeholderSrcSet.push({
-                  src: type === "avatar" ? NoAvatarAvif : NotFoundAvif,
+                  src: type === "avatar" ? noavatarAvif : noimageAvif,
                   type: "image/avif",
                 });
               }
               if (webp) {
                 placeholderSrcSet.push({
-                  src: type === "avatar" ? NoAvatarWebp : NotFoundWebp,
+                  src: type === "avatar" ? noavatarWebp : noimageWebp,
                   type: "image/webp",
                 });
               }
               placeholderSrcSet.push({
-                src: type === "avatar" ? NoAvatarPng : NotFoundJpg,
+                src: type === "avatar" ? noavatarPng : noimageJpg,
                 type: type === "avatar" ? "image/png" : "image/jpeg",
               });
 
