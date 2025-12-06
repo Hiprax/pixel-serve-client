@@ -9,6 +9,10 @@ export default defineConfig({
   clean: true,
   minify: true,
   sourcemap: true,
+  treeshake: true,
+  target: "es2022",
+  platform: "neutral",
+  splitting: false,
   external: ["react"],
   shims: true,
   loader: {

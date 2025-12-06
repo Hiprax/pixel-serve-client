@@ -1,35 +1,35 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ImgHTMLAttributes } from "react";
 
-export type SrcGeneratorProps = {
+export type PixelFolder = "public" | "private";
+export type PixelType = "normal" | "avatar";
+export type PixelFormat = "jpeg" | "png" | "webp" | "avif" | "gif" | "tiff";
+
+export type SrcGeneratorOptions = {
   src: string;
   width?: number;
   height?: number;
   quality?: number;
-  format?: string;
+  format?: PixelFormat;
   userId?: string;
   backendUrl?: string;
-  folder?: "public" | "private";
-  type?: "normal" | "avatar";
-};
-
-export type PixelProps = {
-  src: string;
-  className?: string;
-  alt?: string;
-  style?: CSSProperties;
-  background?: boolean;
-  lazy?: boolean;
-  width?: number;
-  height?: number;
-  quality?: number;
-  userId?: string;
-  backendUrl?: string;
-  avif?: boolean;
-  webp?: boolean;
-  mimeType?: string;
+  folder?: PixelFolder;
+  type?: PixelType;
   direct?: boolean;
-  loader?: boolean;
-  dynamicDimension?: boolean;
-  folder?: "public" | "private";
-  type?: "normal" | "avatar";
 };
+
+export type PixelProps = SrcGeneratorOptions &
+  Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "children"> & {
+    className?: string;
+    alt?: string;
+    style?: CSSProperties;
+    background?: boolean;
+    lazy?: boolean;
+    avif?: boolean;
+    webp?: boolean;
+    mimeType?: PixelFormat;
+    loader?: boolean;
+    dynamicDimension?: boolean;
+    fallbackSrc?: string;
+  };
+
+export type PixelSource = { src: string; type: string };

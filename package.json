@@ -1,12 +1,26 @@
 {
   "name": "pixel-serve-client",
-  "version": "0.0.5",
+  "version": "1.0.0",
   "description": "The `Pixel Serve` component is a powerful and flexible React component designed to handle dynamic image rendering with support for multiple formats, lazy loading, and additional customization options.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./assets/*": "./dist/assets/*",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest watch"
   },
   "files": [
     "dist",
@@ -35,31 +49,31 @@
     "url": "https://github.com/Hiprax/pixel-serve-client/issues"
   },
   "homepage": "https://github.com/Hiprax/pixel-serve-client#readme",
-  "dependencies": {
-    "@babel/runtime": "^7.26.0",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "react": ">=16.9.0",
-    "tsx": "^4.19.2"
-  },
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "@types/react": "^19.0.4",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.3"
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.48.1",
+    "@typescript-eslint/parser": "^8.48.1",
+    "@vitest/coverage-v8": "^4.0.15",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^27.2.0",
+    "prettier": "^3.7.4",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
   },
   "peerDependencies": {
-    "react": ">=16.9.0"
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
   },
   "engines": {
-    "node": ">=8.x"
-  },
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./assets/*": "./dist/assets/*"
+    "node": ">=18"
   }
 }

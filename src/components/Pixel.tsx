@@ -1,10 +1,16 @@
-import { useState, useRef, useEffect, memo, CSSProperties } from "react";
-import type { JSX } from "@emotion/react/jsx-runtime";
-import type { PixelProps } from "../types";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+  type CSSProperties,
+} from "react";
+import type { JSX } from "react";
+import type { PixelProps, PixelSource } from "../types";
 import Skeleton from "./Skeleton";
-import { srcGenerator, getMimeType } from "../functions";
+import { buildPixelSources, getMimeType } from "../functions";
 
-// Import fallback images directly
 import noimageAvif from "../assets/noimage.avif";
 import noimageWebp from "../assets/noimage.webp";
 import noimageJpg from "../assets/noimage.jpg";
@@ -12,32 +18,45 @@ import noavatarAvif from "../assets/noavatar.avif";
 import noavatarWebp from "../assets/noavatar.webp";
 import noavatarPng from "../assets/noavatar.png";
 
-/**
- * Pixel component for displaying images with support for multiple formats and lazy loading.
- *
- * @component
- * @param {Object} props - Component props.
- * @param {string} props.src - The source URL of the image.
- * @param {string} [props.className] - The CSS class for the component.
- * @param {string} [props.alt="image"] - The alt text for the image.
- * @param {Object} [props.style] - Inline styles for the component.
- * @param {boolean} [props.background=false] - Whether the image is used as a background.
- * @param {boolean} [props.lazy=true] - Whether to lazy load the image.
- * @param {number} [props.width] - The width of the image.
- * @param {number} [props.height] - The height of the image.
- * @param {number} [props.quality] - The quality of the image.
- * @param {string} [props.userId] - The user ID of the image owner.
- * @param {boolean} [props.avif=true] - Whether to support AVIF format.
- * @param {boolean} [props.webp=true] - Whether to support WebP format.
- * @param {string} [props.mimeType="jpeg"] - The MIME type of the image.
- * @param {boolean} [props.direct=false] - Whether to directly load the image without conversion.
- * @param {boolean} [props.loader=true] - Whether to display a loading skeleton.
- * @param {boolean} [props.dynamicDimension=false] - Whether the image dimensions are dynamic.
- * @param {string} [props.backendUrl="/api/v1/pixel/serve"] - The backend URL for the image.
- * @param {string} [props.folder="public"] - The folder where the image is stored.
- * @param {string} [props.type="normal"] - The type of image (e.g., 'normal', 'avatar').
- * @returns {JSX.Element} The rendered component.
- */
+const getFallbackSources = (
+  type: PixelProps["type"],
+  avif: boolean,
+  webp: boolean,
+  mimeType: PixelProps["mimeType"]
+): PixelSource[] => {
+  const sources: PixelSource[] = [];
+  if (avif) {
+    sources.push({
+      src: type === "avatar" ? noavatarAvif : noimageAvif,
+      type: "image/avif",
+    });
+  }
+  if (webp) {
+    sources.push({
+      src: type === "avatar" ? noavatarWebp : noimageWebp,
+      type: "image/webp",
+    });
+  }
+  sources.push({
+    src: type === "avatar" ? noavatarPng : noimageJpg,
+    type: getMimeType(mimeType ?? "jpeg"),
+  });
+  return sources;
+};
+
+const preload = (source: PixelSource): Promise<void> => {
+  if (typeof Image === "undefined") {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = source.src;
+    img.onload = () => resolve();
+    img.onerror = () =>
+      reject(new Error(`Failed to load image: ${source.src}`));
+  });
+};
+
 const Pixel = memo(
   ({
     src,
@@ -59,135 +78,71 @@ const Pixel = memo(
     backendUrl = "/api/v1/pixel/serve",
     folder = "public",
     type = "normal",
+    fallbackSrc,
     ...props
   }: PixelProps): JSX.Element => {
-    const [displayedSrcSet, setDisplayedSrcSet] = useState<
-      { src: string; type: string }[]
-    >([]);
+    const [displayedSrcSet, setDisplayedSrcSet] = useState<PixelSource[]>([]);
     const [imageLoaded, setImageLoaded] = useState(false);
-    const isFirstRender = useRef(true);
+    const mounted = useRef(false);
+
+    const desiredSources = useMemo(
+      () =>
+        buildPixelSources({
+          src: fallbackSrc ?? src,
+          width,
+          height,
+          quality,
+          userId,
+          backendUrl,
+          folder,
+          type,
+          direct,
+          avif,
+          webp,
+          mimeType,
+        }),
+      [
+        src,
+        width,
+        height,
+        quality,
+        userId,
+        backendUrl,
+        folder,
+        type,
+        direct,
+        avif,
+        webp,
+        mimeType,
+        fallbackSrc,
+      ]
+    );
 
     useEffect(() => {
-      let isCancelled = false;
-
-      const generateSrcSet = (): { src: string; type: string }[] => {
-        const newSrcSet: { src: string; type: string }[] = [];
-        if (!direct) {
-          if (avif) {
-            newSrcSet.push({
-              src: srcGenerator({
-                src,
-                width,
-                height,
-                quality,
-                format: "avif",
-                userId,
-                folder,
-                type,
-              }),
-              type: "image/avif",
-            });
-          }
-          if (webp) {
-            newSrcSet.push({
-              src: srcGenerator({
-                src,
-                width,
-                height,
-                quality,
-                format: "webp",
-                userId,
-                folder,
-                type,
-              }),
-              type: "image/webp",
-            });
-          }
-          newSrcSet.push({
-            src: srcGenerator({
-              src,
-              width,
-              height,
-              quality,
-              format: mimeType,
-              userId,
-              folder,
-              type,
-            }),
-            type: getMimeType(mimeType),
-          });
-        }
-        return newSrcSet;
-      };
-
-      if (isFirstRender.current) {
-        isFirstRender.current = false;
-        const initialSrcSet = generateSrcSet();
-        setDisplayedSrcSet(initialSrcSet);
-        setImageLoaded(true);
-      } else {
+      mounted.current = true;
+      const run = async () => {
         setImageLoaded(false);
-        const newSrcSet = generateSrcSet();
-
-        const preloadImages = newSrcSet.map((source) => {
-          return new Promise<void>((resolve, reject) => {
-            const img = new Image();
-            img.src = source.src;
-            img.onload = () => resolve();
-            img.onerror = (e) =>
-              reject(new Error(`Failed to load image: ${source.src}`));
-          });
-        });
-
-        Promise.all(preloadImages)
-          .then(() => {
-            if (!isCancelled) {
-              setDisplayedSrcSet(newSrcSet);
-              setImageLoaded(true);
-            }
-          })
-          .catch(() => {
-            if (!isCancelled) {
-              const placeholderSrcSet: { src: string; type: string }[] = [];
-              if (avif) {
-                placeholderSrcSet.push({
-                  src: type === "avatar" ? noavatarAvif : noimageAvif,
-                  type: "image/avif",
-                });
-              }
-              if (webp) {
-                placeholderSrcSet.push({
-                  src: type === "avatar" ? noavatarWebp : noimageWebp,
-                  type: "image/webp",
-                });
-              }
-              placeholderSrcSet.push({
-                src: type === "avatar" ? noavatarPng : noimageJpg,
-                type: type === "avatar" ? "image/png" : "image/jpeg",
-              });
-
-              setDisplayedSrcSet(placeholderSrcSet);
-              setImageLoaded(true);
-            }
-          });
-      }
-
-      return () => {
-        isCancelled = true;
+        try {
+          await Promise.all(desiredSources.map(preload));
+          if (mounted.current) {
+            setDisplayedSrcSet(desiredSources);
+            setImageLoaded(true);
+          }
+        } catch {
+          if (mounted.current) {
+            setDisplayedSrcSet(
+              getFallbackSources(type, avif, webp, mimeType)
+            );
+            setImageLoaded(true);
+          }
+        }
       };
-    }, [
-      src,
-      width,
-      height,
-      quality,
-      mimeType,
-      avif,
-      webp,
-      direct,
-      folder,
-      type,
-      userId,
-    ]);
+
+      void run();
+      return () => {
+        mounted.current = false;
+      };
+    }, [desiredSources, type, avif, webp, mimeType]);
 
     const backgroundStyles: CSSProperties = {
       position: "absolute",
@@ -213,52 +168,54 @@ const Pixel = memo(
       ...(background ? backgroundStyles : {}),
     };
 
-    return (
-      <>
-        {!imageLoaded && loader ? (
-          <Skeleton
-            customCss={
-              background
-                ? `position: absolute;top: 0;right:0;bottom:0;left:0;z-index:0;${
-                    type === "avatar" ? "border-radius:50%;" : ""
-                  }`
-                : `${type === "avatar" ? "border-radius:50%;" : ""}`
-            }
-            width={width ? `${width}px` : "100%"}
-            height={height ? `${height}px` : "100%"}
-          />
-        ) : null}
-        {direct ? (
+    const renderImage = (sourceList: PixelSource[]) => {
+      if (!sourceList.length) return null;
+      const fallback = sourceList[sourceList.length - 1]?.src ?? src;
+
+      if (direct || sourceList.length === 1) {
+        return (
           <img
             className={className}
             alt={alt}
-            src={
-              displayedSrcSet.length
-                ? displayedSrcSet[displayedSrcSet.length - 1].src
-                : src
-            }
+            src={fallback}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
             loading={lazy ? "lazy" : "eager"}
             {...props}
           />
-        ) : displayedSrcSet && displayedSrcSet.length ? (
-          <picture
+        );
+      }
+
+      return (
+        <picture
+          className={className}
+          style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
+        >
+          {sourceList.map((source) => (
+            <source key={source.type} srcSet={source.src} type={source.type} />
+          ))}
+          <img
             className={className}
+            alt={alt}
+            src={fallback}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
-          >
-            {displayedSrcSet.map((source, index) => (
-              <source key={index} srcSet={source.src} type={source.type} />
-            ))}
-            <img
-              className={className}
-              alt={alt}
-              src={displayedSrcSet[displayedSrcSet.length - 1].src}
-              style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
-              loading={lazy ? "lazy" : "eager"}
-              {...props}
-            />
-          </picture>
+            loading={lazy ? "lazy" : "eager"}
+            {...props}
+          />
+        </picture>
+      );
+    };
+
+    return (
+      <>
+        {!imageLoaded && loader ? (
+          <Skeleton
+            isCircle={type === "avatar"}
+            width={width ? `${width}px` : "100%"}
+            height={height ? `${height}px` : "100%"}
+            background={background}
+          />
         ) : null}
+        {renderImage(displayedSrcSet)}
       </>
     );
   }

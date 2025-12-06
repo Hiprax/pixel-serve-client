@@ -1,55 +1,83 @@
-import type { SrcGeneratorProps } from "./types";
+import type {
+  PixelFormat,
+  PixelSource,
+  SrcGeneratorOptions,
+} from "./types";
 
-/**
- * Generates the MIME type based on the file extension.
- *
- * @param {string} type - The file extension (e.g., 'jpg', 'png').
- * @returns {string} The corresponding MIME type.
- */
-export const getMimeType = (type: string): string => {
-  const extensionMap: Record<string, string> = {
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    png: "image/png",
-    webp: "image/webp",
-    gif: "image/gif",
-    tiff: "image/tiff",
-    tif: "image/tiff",
-    avif: "image/avif",
-  };
-  return extensionMap[type] || "";
+const extensionMap: Record<PixelFormat, string> = {
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  tiff: "image/tiff",
+  avif: "image/avif",
 };
 
-/**
- * Generates the source URL for the image based on the provided parameters.
- *
- * @param {Object} options - Options for generating the image source URL.
- * @param {string} options.src - The source URL of the image.
- * @param {number} [options.width] - The width of the image.
- * @param {number} [options.height] - The height of the image.
- * @param {number} [options.quality] - The quality of the image.
- * @param {string} [options.format] - The format of the image.
- * @param {string} [options.userId] - The user ID of the image owner.
- * @param {string} [options.backendUrl="/api/v1/pixel/serve"] - The backend URL for the image.
- * @param {string} [options.folder="public"] - The folder where the image is stored.
- * @param {string} [options.type="normal"] - The type of image (e.g., 'normal', 'avatar').
- * @returns {string} The generated source URL.
- */
-export const srcGenerator = ({
+export const getMimeType = (type: PixelFormat = "jpeg"): string =>
+  extensionMap[type];
+
+const buildParams = ({
   src,
   width,
   height,
   quality,
   format,
   userId,
-  backendUrl = "/api/v1/pixel/serve",
   folder = "public",
   type = "normal",
-}: SrcGeneratorProps) =>
-  `${backendUrl}?${width ? "width=" + width : ""}${
-    height ? "&height=" + height : ""
-  }${quality ? "&quality=" + quality : ""}${
-    format ? "&format=" + format : ""
-  }&src=${src}&folder=${folder === "private" ? "private" : "public"}&type=${
-    type === "avatar" ? "avatar" : "normal"
-  }${userId ? "&userId=" + userId : ""}`;
+}: SrcGeneratorOptions) => {
+  const params = new URLSearchParams();
+  if (width) params.set("width", String(width));
+  if (height) params.set("height", String(height));
+  if (quality) params.set("quality", String(quality));
+  if (format) params.set("format", format);
+  params.set("src", src);
+  params.set("folder", folder === "private" ? "private" : "public");
+  params.set("type", type === "avatar" ? "avatar" : "normal");
+  if (userId) params.set("userId", userId);
+  return params.toString();
+};
+
+export const buildPixelUrl = ({
+  backendUrl = "/api/v1/pixel/serve",
+  ...options
+}: SrcGeneratorOptions): string =>
+  `${backendUrl}?${buildParams(options)}`;
+
+export const buildPixelSources = ({
+  avif = true,
+  webp = true,
+  mimeType = "jpeg",
+  ...options
+}: SrcGeneratorOptions & {
+  avif?: boolean;
+  webp?: boolean;
+  mimeType?: PixelFormat;
+}): PixelSource[] => {
+  if (options.direct) {
+    return [
+      {
+        src: options.src,
+        type: extensionMap[mimeType],
+      },
+    ];
+  }
+  const sources: PixelSource[] = [];
+  if (avif) {
+    sources.push({
+      src: buildPixelUrl({ ...options, format: "avif" }),
+      type: extensionMap.avif,
+    });
+  }
+  if (webp) {
+    sources.push({
+      src: buildPixelUrl({ ...options, format: "webp" }),
+      type: extensionMap.webp,
+    });
+  }
+  sources.push({
+    src: buildPixelUrl({ ...options, format: mimeType }),
+    type: extensionMap[mimeType],
+  });
+  return sources;
+};
