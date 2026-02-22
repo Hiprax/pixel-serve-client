@@ -1,8 +1,4 @@
-import type {
-  PixelFormat,
-  PixelSource,
-  SrcGeneratorOptions,
-} from "./types";
+import type { PixelFormat, PixelSource, SrcGeneratorOptions } from "./types";
 
 const extensionMap: Record<PixelFormat, string> = {
   jpeg: "image/jpeg",
@@ -14,7 +10,7 @@ const extensionMap: Record<PixelFormat, string> = {
 };
 
 export const getMimeType = (type: PixelFormat = "jpeg"): string =>
-  extensionMap[type];
+  extensionMap[type] ?? "image/jpeg";
 
 const buildParams = ({
   src,
@@ -25,11 +21,13 @@ const buildParams = ({
   userId,
   folder = "public",
   type = "normal",
-}: SrcGeneratorOptions) => {
+}: SrcGeneratorOptions): string => {
   const params = new URLSearchParams();
-  if (width) params.set("width", String(width));
-  if (height) params.set("height", String(height));
-  if (quality) params.set("quality", String(quality));
+  if (width !== undefined && width !== null) params.set("width", String(width));
+  if (height !== undefined && height !== null)
+    params.set("height", String(height));
+  if (quality !== undefined && quality !== null)
+    params.set("quality", String(quality));
   if (format) params.set("format", format);
   params.set("src", src);
   params.set("folder", folder === "private" ? "private" : "public");
@@ -41,8 +39,7 @@ const buildParams = ({
 export const buildPixelUrl = ({
   backendUrl = "/api/v1/pixel/serve",
   ...options
-}: SrcGeneratorOptions): string =>
-  `${backendUrl}?${buildParams(options)}`;
+}: SrcGeneratorOptions): string => `${backendUrl}?${buildParams(options)}`;
 
 export const buildPixelSources = ({
   avif = true,

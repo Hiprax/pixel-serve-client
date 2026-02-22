@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -9,7 +10,7 @@ import {
 import type { JSX } from "react";
 import type { PixelProps, PixelSource } from "../types";
 import Skeleton from "./Skeleton";
-import { buildPixelSources, getMimeType } from "../functions";
+import { buildPixelSources } from "../functions";
 
 import noimageAvif from "../assets/noimage.avif";
 import noimageWebp from "../assets/noimage.webp";
@@ -21,8 +22,7 @@ import noavatarPng from "../assets/noavatar.png";
 const getFallbackSources = (
   type: PixelProps["type"],
   avif: boolean,
-  webp: boolean,
-  mimeType: PixelProps["mimeType"]
+  webp: boolean
 ): PixelSource[] => {
   const sources: PixelSource[] = [];
   if (avif) {
@@ -39,7 +39,7 @@ const getFallbackSources = (
   }
   sources.push({
     src: type === "avatar" ? noavatarPng : noimageJpg,
-    type: getMimeType(mimeType ?? "jpeg"),
+    type: type === "avatar" ? "image/png" : "image/jpeg",
   });
   return sources;
 };
@@ -51,8 +51,8 @@ const preload = (source: PixelSource): Promise<void> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = source.src;
-    img.onload = () => resolve();
-    img.onerror = () =>
+    img.onload = (): void => resolve();
+    img.onerror = (): void =>
       reject(new Error(`Failed to load image: ${source.src}`));
   });
 };
@@ -120,26 +120,27 @@ const Pixel = memo(
 
     useEffect(() => {
       mounted.current = true;
-      const run = async () => {
+      const run = async (): Promise<void> => {
         setImageLoaded(false);
-        try {
-          await Promise.all(desiredSources.map(preload));
-          if (mounted.current) {
-            setDisplayedSrcSet(desiredSources);
-            setImageLoaded(true);
-          }
-        } catch {
-          if (mounted.current) {
-            setDisplayedSrcSet(
-              getFallbackSources(type, avif, webp, mimeType)
-            );
-            setImageLoaded(true);
-          }
+        const results = await Promise.allSettled(desiredSources.map(preload));
+        if (!mounted.current) return;
+
+        const successfulSources = desiredSources.filter(
+          (_, i) => results[i].status === "fulfilled"
+        );
+
+        if (successfulSources.length > 0) {
+          setDisplayedSrcSet(successfulSources);
+        } else {
+          setDisplayedSrcSet(
+            getFallbackSources(type, avif, webp)
+          );
         }
+        setImageLoaded(true);
       };
 
       void run();
-      return () => {
+      return (): void => {
         mounted.current = false;
       };
     }, [desiredSources, type, avif, webp, mimeType]);
@@ -168,7 +169,15 @@ const Pixel = memo(
       ...(background ? backgroundStyles : {}),
     };
 
-    const renderImage = (sourceList: PixelSource[]) => {
+    const handleImgError = useCallback((): void => {
+      const fallbacks = getFallbackSources(type, avif, webp);
+      const lastFallback = fallbacks[fallbacks.length - 1];
+      if (lastFallback) {
+        setDisplayedSrcSet([lastFallback]);
+      }
+    }, [type, avif, webp]);
+
+    const renderImage = (sourceList: PixelSource[]): JSX.Element | null => {
       if (!sourceList.length) return null;
       const fallback = sourceList[sourceList.length - 1]?.src ?? src;
 
@@ -180,6 +189,7 @@ const Pixel = memo(
             src={fallback}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
             loading={lazy ? "lazy" : "eager"}
+            onError={handleImgError}
             {...props}
           />
         );
@@ -199,6 +209,7 @@ const Pixel = memo(
             src={fallback}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
             loading={lazy ? "lazy" : "eager"}
+            onError={handleImgError}
             {...props}
           />
         </picture>

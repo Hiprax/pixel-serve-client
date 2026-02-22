@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import Skeleton from "./Skeleton";
 
 describe("Skeleton", () => {
@@ -51,7 +51,7 @@ describe("Skeleton", () => {
     ) as HTMLDivElement | null;
     expect(div?.style.borderRadius).toBe("50%");
     expect(div?.style.position).toBe("absolute");
-    expect(["0", "0px"]).toContain(div?.style.inset);
+    expect(div?.style.inset).toMatch(/^0(px)?$/);
     expect(div?.className.includes("custom-class")).toBe(true);
   });
 

@@ -3,6 +3,7 @@
 **A fast, fully typed React 18+ image component** for the [Pixel Serve Server](https://www.npmjs.com/package/pixel-serve-server) backend. Ships ESM & CJS builds with first-class TypeScript IntelliSense.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/pixel-serve-client)](https://www.npmjs.com/package/pixel-serve-client)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.2.1-blue.svg)](https://react.dev/)
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildPixelSources, buildPixelUrl, getMimeType } from "./functions";
+import type { PixelFormat } from "./types";
 
 describe("getMimeType", () => {
   it("returns correct MIME type for jpeg", () => {
@@ -28,6 +29,10 @@ describe("getMimeType", () => {
 
   it("defaults to jpeg when type is undefined", () => {
     expect(getMimeType()).toBe("image/jpeg");
+  });
+
+  it("falls back to jpeg for unknown format", () => {
+    expect(getMimeType("unknown" as PixelFormat)).toBe("image/jpeg");
   });
 });
 
@@ -113,6 +118,31 @@ describe("buildPixelUrl", () => {
     expect(url).toContain("folder=private");
     expect(url).toContain("type=avatar");
     expect(url).toContain("src=%2Fphoto.png");
+  });
+
+  it("encodes special characters in src", () => {
+    const url = buildPixelUrl({ src: "/path with spaces/image.jpg" });
+    expect(url).toContain("src=%2Fpath+with+spaces%2Fimage.jpg");
+  });
+
+  it("excludes width from URL when undefined", () => {
+    const url = buildPixelUrl({ src: "/image.jpg" });
+    expect(url).not.toContain("width=");
+  });
+
+  it("excludes height from URL when undefined", () => {
+    const url = buildPixelUrl({ src: "/image.jpg" });
+    expect(url).not.toContain("height=");
+  });
+
+  it("excludes quality from URL when undefined", () => {
+    const url = buildPixelUrl({ src: "/image.jpg" });
+    expect(url).not.toContain("quality=");
+  });
+
+  it("excludes userId from URL when not provided", () => {
+    const url = buildPixelUrl({ src: "/image.jpg" });
+    expect(url).not.toContain("userId=");
   });
 });
 
@@ -248,5 +278,30 @@ describe("buildPixelSources", () => {
     });
 
     expect(sources[0].type).toBe("image/gif");
+  });
+
+  it("generates correct source order: avif first, webp second, primary last", () => {
+    const sources = buildPixelSources({
+      src: "/image.jpg",
+      avif: true,
+      webp: true,
+      mimeType: "png",
+    });
+
+    expect(sources).toHaveLength(3);
+    expect(sources[0].type).toBe("image/avif");
+    expect(sources[1].type).toBe("image/webp");
+    expect(sources[2].type).toBe("image/png");
+  });
+
+  it("uses default mimeType of jpeg when not specified", () => {
+    const sources = buildPixelSources({
+      src: "/image.jpg",
+      avif: false,
+      webp: false,
+    });
+
+    expect(sources).toHaveLength(1);
+    expect(sources[0].type).toBe("image/jpeg");
   });
 });

@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import Pixel from "./Pixel";
 import { buildPixelSources, buildPixelUrl } from "../functions";
 import { unsetImage } from "../../vitest.setup";
 
-const waitForLoad = async () =>
+const waitForLoad = async (): Promise<void> =>
   waitFor(() => expect(screen.getByRole("img")).toBeInTheDocument());
 
 describe("Pixel component", () => {
@@ -238,12 +238,183 @@ describe("Pixel component", () => {
     expect(img.getAttribute("src")).toContain("/custom/api");
   });
 
-  it("cleans up on unmount", async () => {
+  it("cleans up on unmount without errors", async () => {
+    const consoleSpy = vi.spyOn(console, "error");
     const { unmount } = render(<Pixel src="/image.jpg" loader={false} />);
     await waitForLoad();
     unmount();
-    // Should not throw errors on unmount
-    expect(true).toBe(true);
+    // Verify no React state-update-after-unmount warnings
+    expect(consoleSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+
+  it("re-renders with new sources when src prop changes", async () => {
+    const { rerender } = render(
+      <Pixel src="/image1.jpg" loader={false} avif={false} webp={false} mimeType="jpeg" />
+    );
+    const img1 = await screen.findByRole("img");
+    expect(img1.getAttribute("src")).toContain("src=%2Fimage1.jpg");
+
+    rerender(
+      <Pixel src="/image2.jpg" loader={false} avif={false} webp={false} mimeType="jpeg" />
+    );
+    const img2 = await screen.findByRole("img");
+    expect(img2.getAttribute("src")).toContain("src=%2Fimage2.jpg");
+  });
+
+  it("applies fixed dimensions when dynamicDimension is false", async () => {
+    render(
+      <Pixel
+        src="/image.jpg"
+        width={300}
+        height={200}
+        dynamicDimension={false}
+        loader={false}
+      />
+    );
+    await waitForLoad();
+    const img = screen.getByRole("img");
+    expect(img.style.width).toBe("300px");
+    expect(img.style.height).toBe("200px");
+  });
+
+  it("does not apply fixed dimensions when dynamicDimension is true", async () => {
+    render(
+      <Pixel
+        src="/image.jpg"
+        width={300}
+        height={200}
+        dynamicDimension={true}
+        loader={false}
+      />
+    );
+    await waitForLoad();
+    const img = screen.getByRole("img");
+    expect(img.style.width).not.toBe("300px");
+    expect(img.style.height).not.toBe("200px");
+  });
+
+  it("renders direct mode with data URL", async () => {
+    const dataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    render(<Pixel src={dataUrl} direct loader={false} />);
+    const img = await screen.findByRole("img");
+    expect(img.getAttribute("src")).toBe(dataUrl);
+  });
+
+  it("falls back to normal placeholder when all sources fail and type is normal", async () => {
+    render(
+      <Pixel
+        src="fail-all.jpg"
+        type="normal"
+        avif={false}
+        webp={false}
+        mimeType="jpeg"
+        loader={false}
+      />
+    );
+    const img = await screen.findByRole("img");
+    expect(img.getAttribute("src")).toContain("noimage");
+  });
+
+  it("renders picture element with multiple sources when formats enabled", async () => {
+    render(
+      <Pixel
+        src="/image.jpg"
+        avif={true}
+        webp={true}
+        mimeType="jpeg"
+        loader={false}
+      />
+    );
+    await waitForLoad();
+    const picture = document.querySelector("picture");
+    expect(picture).toBeInTheDocument();
+    const sources = picture?.querySelectorAll("source");
+    expect(sources?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("passes onClick handler to img element", async () => {
+    const handleClick = vi.fn();
+    render(
+      <Pixel src="/image.jpg" onClick={handleClick} loader={false} />
+    );
+    await waitForLoad();
+    const img = screen.getByRole("img");
+    img.click();
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses fallbackSrc for source generation instead of src", async () => {
+    render(
+      <Pixel
+        src="/original.jpg"
+        fallbackSrc="/override.jpg"
+        avif={false}
+        webp={false}
+        mimeType="jpeg"
+        loader={false}
+      />
+    );
+    const img = await screen.findByRole("img");
+    // fallbackSrc should be used in the URL, not original src
+    expect(img.getAttribute("src")).toContain("src=%2Foverride.jpg");
+    expect(img.getAttribute("src")).not.toContain("src=%2Foriginal.jpg");
+  });
+
+  it("hides image with 1px dimensions while loading", () => {
+    render(
+      <Pixel src="/loading-image.jpg" width={300} height={200} loader={true} />
+    );
+    // While loading, image should not be visible (no img role yet or hidden)
+    const imgs = screen.queryAllByRole("img");
+    // No img should be rendered yet since displayedSrcSet is empty
+    expect(imgs.length).toBe(0);
+  });
+
+  it("onError handler triggers fallback for normal type", async () => {
+    render(
+      <Pixel
+        src="/will-error.jpg"
+        direct
+        loader={false}
+        type="normal"
+      />
+    );
+    const img = await screen.findByRole("img");
+    // Initially the image should have the direct src
+    expect(img.getAttribute("src")).toBe("/will-error.jpg");
+
+    // Simulate the browser reporting an image load error
+    fireEvent.error(img);
+
+    // After the error, the component should switch to the noimage fallback
+    await waitFor(() => {
+      const updatedImg = screen.getByRole("img");
+      expect(updatedImg.getAttribute("src")).toContain("noimage");
+    });
+  });
+
+  it("onError handler triggers avatar fallback for avatar type", async () => {
+    render(
+      <Pixel
+        src="/will-error-avatar.jpg"
+        direct
+        loader={false}
+        type="avatar"
+      />
+    );
+    const img = await screen.findByRole("img");
+    // Initially the image should have the direct src
+    expect(img.getAttribute("src")).toBe("/will-error-avatar.jpg");
+
+    // Simulate the browser reporting an image load error
+    fireEvent.error(img);
+
+    // After the error, the component should switch to the noavatar fallback
+    await waitFor(() => {
+      const updatedImg = screen.getByRole("img");
+      expect(updatedImg.getAttribute("src")).toContain("noavatar");
+    });
   });
 });
 
