@@ -4,8 +4,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![npm version](https://img.shields.io/npm/v/pixel-serve-client)](https://www.npmjs.com/package/pixel-serve-client)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue.svg)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-19.2.1-blue.svg)](https://react.dev/)
+[![CI](https://github.com/Hiprax/pixel-serve-client/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Hiprax/pixel-serve-client/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/Hiprax/pixel-serve-client/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/Hiprax/pixel-serve-client/actions/workflows/codeql.yml)
+[![codecov](https://codecov.io/gh/Hiprax/pixel-serve-client/branch/main/graph/badge.svg)](https://codecov.io/gh/Hiprax/pixel-serve-client)
+[![Dependencies](https://img.shields.io/librariesio/release/npm/pixel-serve-client)](https://libraries.io/npm/pixel-serve-client)
+[![npm provenance](https://img.shields.io/npm/sigstore/pixel-serve-client?label=provenance)](https://www.npmjs.com/package/pixel-serve-client)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0.3-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-18%20%7C%2019-blue.svg)](https://react.dev/)
 
 ## Features
 
@@ -17,6 +22,8 @@
 - ♻️ **Dual builds**: Works in both ESM and CommonJS environments
 
 ## Installation
+
+Requires **Node.js 20 or newer** for the build/test tooling (Node 18 reached end-of-life on 2025-04-30; Vitest 4, ESLint 10, and jsdom 29 in the toolchain now require Node 20+). The bundled component itself runs in any browser that supports `<picture>` and the listed image formats.
 
 ```bash
 npm install pixel-serve-client
@@ -86,6 +93,7 @@ const App = () => (
 | `direct`           | `boolean`               | `false`               | If true, use `src` verbatim without format variants |
 | `lazy`             | `boolean`               | `true`                | Enable native lazy loading                          |
 | `loader`           | `boolean`               | `true`                | Show skeleton until images resolve                  |
+| `eagerLoad`        | `boolean`               | `false`               | Skip preload chain; render `<picture>` immediately and rely on native `onError` |
 | `background`       | `boolean`               | `false`               | Apply background-fit styling                        |
 | `folder`           | `'public' \| 'private'` | `"public"`            | Matches server expectation                          |
 | `type`             | `'normal' \| 'avatar'`  | `"normal"`            | Chooses avatar vs image fallbacks                   |
@@ -134,6 +142,49 @@ Skip the Pixel Serve backend and use the image URL directly:
 ```tsx
 <Pixel src="/legacy.jpg" avif={false} webp={false} mimeType="jpeg" />
 ```
+
+### Eager Load (skip preload chain)
+
+By default the component preloads each candidate format via `new Image()` and
+swaps in the bundled fallback only for formats that fail. When `eagerLoad` is
+true, the preload chain is bypassed entirely: `<picture>` is rendered
+immediately with the constructed sources and the native `<img onError>`
+handler triggers the bundled placeholder fallback. Use this when you want
+the browser to drive loading directly and you do not need per-format
+success detection (the fallback only fires when the **final** `<img>`
+fails, not the intermediate AVIF/WebP sources).
+
+```tsx
+<Pixel
+  src="/uploads/photo.jpg"
+  width={800}
+  height={600}
+  eagerLoad
+  loader={false}
+/>
+```
+
+#### When to use `eagerLoad`
+
+- **Tradeoff.** The component skips the per-format preload detection loop
+  that normally runs `new Image()` against AVIF, WebP, and the primary
+  format in parallel before mounting. The smart fallback chain that would
+  swap in the bundled placeholder for a single format failing is **not
+  engaged** — the browser is in charge of source negotiation.
+- **Use case.** Reach for `eagerLoad` when you want **zero skeleton
+  flash** for URLs you already know are good (CDN-served images with a
+  warm cache, hero banners above the fold, dashboards where every
+  millisecond of placeholder shimmer is visible noise). Pair it with
+  `loader={false}` for the most aggressive setup.
+- **Caveat.** If a format is unsupported by the browser, the
+  `<picture>`/`<source>` negotiation still picks the next compatible
+  format automatically — `<picture>` itself handles per-source fallback
+  at the browser level. What you lose is the **client-side smart
+  fallback chain** that detects "all my candidates failed" and renders
+  the bundled placeholder. With `eagerLoad`, the bundled placeholder
+  only kicks in when the **final** `<img>` errors (via the native
+  `onError` handler), not when an intermediate AVIF/WebP source fails
+  in a way `<picture>` could not negotiate past.
 
 ### Custom Backend URL
 
@@ -284,3 +335,11 @@ MIT
 ## Contributing
 
 Issues and pull requests are welcome at [GitHub](https://github.com/Hiprax/pixel-serve-client).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the local development workflow,
+coverage expectations, and PR guidelines.
+
+## Security
+
+See [`SECURITY.md`](./SECURITY.md) for the disclosure policy, supported
+versions, and the in-scope / out-of-scope vulnerability classes. Please **do
+not** open public GitHub issues for security reports.

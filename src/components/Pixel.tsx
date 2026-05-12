@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   memo,
   type CSSProperties,
@@ -22,7 +21,7 @@ import noavatarPng from "../assets/noavatar.png";
 const getFallbackSources = (
   type: PixelProps["type"],
   avif: boolean,
-  webp: boolean
+  webp: boolean,
 ): PixelSource[] => {
   const sources: PixelSource[] = [];
   if (avif) {
@@ -44,16 +43,32 @@ const getFallbackSources = (
   return sources;
 };
 
-const preload = (source: PixelSource): Promise<void> => {
+type PreloadAttributes = {
+  crossOrigin?: PixelProps["crossOrigin"];
+  referrerPolicy?: PixelProps["referrerPolicy"];
+};
+
+const preload = (
+  source: PixelSource,
+  attrs: PreloadAttributes = {},
+): Promise<void> => {
   if (typeof Image === "undefined") {
     return Promise.resolve();
   }
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.src = source.src;
+    if (attrs.crossOrigin) img.crossOrigin = attrs.crossOrigin;
+    if (attrs.referrerPolicy) img.referrerPolicy = attrs.referrerPolicy;
     img.onload = (): void => resolve();
     img.onerror = (): void =>
       reject(new Error(`Failed to load image: ${source.src}`));
+    img.src = source.src;
+    // If the browser already has the image cached, `complete` flips to true
+    // synchronously after assigning `src`. Resolve immediately to avoid a
+    // skeleton flash for cached images.
+    if (img.complete && img.naturalWidth > 0) {
+      resolve();
+    }
   });
 };
 
@@ -74,16 +89,35 @@ const Pixel = memo(
     mimeType = "jpeg",
     direct = false,
     loader = true,
+    eagerLoad = false,
     dynamicDimension = false,
     backendUrl = "/api/v1/pixel/serve",
     folder = "public",
     type = "normal",
     fallbackSrc,
+    crossOrigin,
+    referrerPolicy,
     ...props
   }: PixelProps): JSX.Element => {
-    const [displayedSrcSet, setDisplayedSrcSet] = useState<PixelSource[]>([]);
-    const [imageLoaded, setImageLoaded] = useState(false);
-    const mounted = useRef(false);
+    const [displayedSrcSet, setDisplayedSrcSet] = useState<PixelSource[]>(() =>
+      eagerLoad
+        ? buildPixelSources({
+            src: fallbackSrc ?? src,
+            width,
+            height,
+            quality,
+            userId,
+            backendUrl,
+            folder,
+            type,
+            direct,
+            avif,
+            webp,
+            mimeType,
+          })
+        : [],
+    );
+    const [imageLoaded, setImageLoaded] = useState(eagerLoad);
 
     const desiredSources = useMemo(
       () =>
@@ -115,35 +149,53 @@ const Pixel = memo(
         webp,
         mimeType,
         fallbackSrc,
-      ]
+      ],
     );
 
     useEffect(() => {
-      mounted.current = true;
+      // eagerLoad skips the per-format preload chain entirely. The component
+      // renders <picture> directly using `desiredSources` and relies on the
+      // native onError handler for fallbacks. Tradeoff: format-by-format
+      // success detection is not available in this mode.
+      if (eagerLoad) {
+        setDisplayedSrcSet(desiredSources);
+        setImageLoaded(true);
+        return;
+      }
+
+      let cancelled = false;
       const run = async (): Promise<void> => {
         setImageLoaded(false);
-        const results = await Promise.allSettled(desiredSources.map(preload));
-        if (!mounted.current) return;
+        const results = await Promise.allSettled(
+          desiredSources.map((source) =>
+            preload(source, { crossOrigin, referrerPolicy }),
+          ),
+        );
+        if (cancelled) return;
 
         const successfulSources = desiredSources.filter(
-          (_, i) => results[i].status === "fulfilled"
+          (_, i) => results[i].status === "fulfilled",
         );
 
         if (successfulSources.length > 0) {
           setDisplayedSrcSet(successfulSources);
         } else {
-          setDisplayedSrcSet(
-            getFallbackSources(type, avif, webp)
-          );
+          setDisplayedSrcSet(getFallbackSources(type, avif, webp));
         }
         setImageLoaded(true);
       };
 
       void run();
       return (): void => {
-        mounted.current = false;
+        cancelled = true;
       };
-    }, [desiredSources, type, avif, webp, mimeType]);
+      // `desiredSources` is the sole dependency: it is a memoized reference
+      // that already encodes every input which affects preloading (src,
+      // width, height, quality, userId, backendUrl, folder, type, direct,
+      // avif, webp, mimeType, fallbackSrc). `eagerLoad`, `crossOrigin`, and
+      // `referrerPolicy` are intentionally captured at effect-run time —
+      // changing them mid-lifecycle is not a supported workflow.
+    }, [desiredSources]);
 
     const backgroundStyles: CSSProperties = {
       position: "absolute",
@@ -158,11 +210,13 @@ const Pixel = memo(
       zIndex: -1,
     };
 
+    const hasExplicitDimensions = width !== undefined || height !== undefined;
+
     const imageStyle: CSSProperties = {
-      ...((width || height) && !dynamicDimension
+      ...(hasExplicitDimensions && !dynamicDimension
         ? {
-            width: width ? `${width}px` : "auto",
-            height: height ? `${height}px` : "auto",
+            width: width !== undefined ? `${width}px` : "auto",
+            height: height !== undefined ? `${height}px` : "auto",
             ...style,
           }
         : { ...style }),
@@ -187,6 +241,10 @@ const Pixel = memo(
             className={className}
             alt={alt}
             src={fallback}
+            {...(width !== undefined ? { width } : {})}
+            {...(height !== undefined ? { height } : {})}
+            {...(crossOrigin ? { crossOrigin } : {})}
+            {...(referrerPolicy ? { referrerPolicy } : {})}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
             loading={lazy ? "lazy" : "eager"}
             onError={handleImgError}
@@ -207,6 +265,10 @@ const Pixel = memo(
             className={className}
             alt={alt}
             src={fallback}
+            {...(width !== undefined ? { width } : {})}
+            {...(height !== undefined ? { height } : {})}
+            {...(crossOrigin ? { crossOrigin } : {})}
+            {...(referrerPolicy ? { referrerPolicy } : {})}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
             loading={lazy ? "lazy" : "eager"}
             onError={handleImgError}
@@ -229,7 +291,7 @@ const Pixel = memo(
         {renderImage(displayedSrcSet)}
       </>
     );
-  }
+  },
 );
 
 Pixel.displayName = "Pixel";

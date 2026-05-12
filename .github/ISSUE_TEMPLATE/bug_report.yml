@@ -1,0 +1,75 @@
+name: Bug report
+description: Report a problem with pixel-serve-client
+title: "[bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. The more concrete the reproduction, the faster it can be fixed.
+  - type: input
+    id: version
+    attributes:
+      label: "Package version"
+      description: "Run `npm ls pixel-serve-client` or check your `package.json`."
+      placeholder: "1.1.6"
+    validations:
+      required: true
+  - type: input
+    id: react
+    attributes:
+      label: "React version"
+      description: "From your `package.json`."
+      placeholder: "19.2.6"
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: "Node.js version"
+      description: "Run `node --version`."
+      placeholder: "v22.11.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: env
+    attributes:
+      label: "Rendering environment"
+      options:
+        - Browser (CSR)
+        - Browser (Vite/CRA)
+        - Next.js (App Router)
+        - Next.js (Pages Router)
+        - Remix
+        - Astro
+        - SSR (custom)
+        - Other (note in description)
+    validations:
+      required: true
+  - type: textarea
+    id: props
+    attributes:
+      label: "Pixel props used"
+      description: "Paste the (redacted) JSX you're rendering."
+      render: tsx
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected behavior"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: "Actual behavior"
+      description: "Include console errors, network failures, or visual artifacts (screenshots welcome)."
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: "Additional context"
+      description: "Backend (pixel-serve-server version, CDN, direct URLs), browser, anything else relevant."

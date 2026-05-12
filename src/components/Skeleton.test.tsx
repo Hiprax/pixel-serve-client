@@ -14,7 +14,7 @@ describe("Skeleton", () => {
   it("renders with default rect style", () => {
     const { container } = render(<Skeleton width={50} height={20} />);
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div).toBeInTheDocument();
     expect(div?.style.width).toBe("50px");
@@ -25,13 +25,13 @@ describe("Skeleton", () => {
   it("reuses injected styles without duplicating tag", () => {
     render(<Skeleton width={10} height={10} />);
     const initialStyleCount = document.querySelectorAll(
-      "#pixel-serve-skeleton-style"
+      "#pixel-serve-skeleton-style",
     ).length;
     expect(initialStyleCount).toBe(1);
 
     render(<Skeleton width={12} height={12} />);
     const newStyleCount = document.querySelectorAll(
-      "#pixel-serve-skeleton-style"
+      "#pixel-serve-skeleton-style",
     ).length;
     expect(newStyleCount).toBe(1);
   });
@@ -44,10 +44,10 @@ describe("Skeleton", () => {
         isCircle
         background
         className="custom-class"
-      />
+      />,
     );
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div?.style.borderRadius).toBe("50%");
     expect(div?.style.position).toBe("absolute");
@@ -58,7 +58,7 @@ describe("Skeleton", () => {
   it("renders with string width and height", () => {
     const { container } = render(<Skeleton width="100%" height="50vh" />);
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div?.style.width).toBe("100%");
     expect(div?.style.height).toBe("50vh");
@@ -66,10 +66,10 @@ describe("Skeleton", () => {
 
   it("renders without background class when not background mode", () => {
     const { container } = render(
-      <Skeleton width={100} height={100} background={false} />
+      <Skeleton width={100} height={100} background={false} />,
     );
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div?.style.position).toBe("");
     expect(div?.style.inset).toBe("");
@@ -77,10 +77,10 @@ describe("Skeleton", () => {
 
   it("renders without isCircle for rect shape", () => {
     const { container } = render(
-      <Skeleton width={100} height={50} isCircle={false} />
+      <Skeleton width={100} height={50} isCircle={false} />,
     );
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div?.style.borderRadius).toBe("4px");
   });
@@ -88,7 +88,7 @@ describe("Skeleton", () => {
   it("has correct accessibility attributes", () => {
     const { container } = render(<Skeleton width={100} height={100} />);
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div?.getAttribute("role")).toBe("presentation");
     expect(div?.getAttribute("aria-hidden")).toBe("true");
@@ -97,17 +97,17 @@ describe("Skeleton", () => {
   it("renders without custom className", () => {
     const { container } = render(<Skeleton width={100} height={100} />);
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div?.className).toBe("pixel-serve-skeleton");
   });
 
   it("applies zIndex when in background mode", () => {
     const { container } = render(
-      <Skeleton width={100} height={100} background />
+      <Skeleton width={100} height={100} background />,
     );
     const div = container.querySelector(
-      ".pixel-serve-skeleton"
+      ".pixel-serve-skeleton",
     ) as HTMLDivElement | null;
     expect(div?.style.zIndex).toBe("0");
   });
