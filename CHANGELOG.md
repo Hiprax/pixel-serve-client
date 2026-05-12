@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-05-12
+
+### Security
+
+- **Plug incomplete-sanitization in CHANGELOG section regex.** CodeQL `js/incomplete-sanitization` (alert #1) flagged `pkg.version.replace(/\./g, "\\.")` in `scripts/release-tag.mjs` because it escapes `.` but not the backslash itself — a future pre-release tag could in principle smuggle a partial escape past us. Switched to a full regex-metachar escape `/[\\^$.*+?()[\]{}|]/g, "\\$&"`. (Mirrors the same fix shipped in `pixel-serve-server` v2.8.7 since the script is part of a shared scaffold.) (`scripts/release-tag.mjs`)
+
+### Added
+
+- **Origin-remote sanity check in `release-tag.mjs`.** Verifies `package.json#name` matches the second segment of the `origin` remote slug before creating the tag, so an accidental `release:tag` invocation from the wrong working directory cannot push a mis-versioned tag to the wrong repo. (`scripts/release-tag.mjs`)
+
+### Documentation
+
+- **Remove libraries.io "Dependencies" badge.** Removed `[![Dependencies](https://img.shields.io/librariesio/release/npm/pixel-serve-client)](https://libraries.io/npm/pixel-serve-client)` from the README so the status row only shows badges this project directly controls or that reflect first-party CI signal (CI, CodeQL, Codecov, npm provenance). (`README.md`)
+
 ## [1.1.8] - 2026-05-12
 
 ### Documentation

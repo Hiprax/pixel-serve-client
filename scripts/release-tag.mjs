@@ -64,6 +64,28 @@ main(async () => {
   const { json: pkg } = await readPkg();
   const tag = `v${pkg.version}`;
 
+  // Sanity check: make sure the origin remote matches the package name we are
+  // about to tag. A prior incident saw `v1.1.8` (the client's version)
+  // accidentally pushed to the server repo because the user was in the wrong
+  // directory and short-circuited this script; the release workflow correctly
+  // refused to publish, but it left a red CI run on the wrong repo. Catching
+  // it here keeps the bad tag from ever reaching origin.
+  const remoteUrl = await git.remote();
+  const slugMatch = /[:/]([^:/]+\/[^/]+?)(?:\.git)?$/.exec(remoteUrl);
+  const originSlug = slugMatch ? slugMatch[1] : null;
+  if (originSlug) {
+    const expectedRepo = pkg.name;
+    const originRepo = originSlug.split("/")[1];
+    if (originRepo !== expectedRepo) {
+      log.fail(
+        `Origin remote points to '${originSlug}' but package.json#name is '${expectedRepo}'. ` +
+          `Refusing to tag — you are almost certainly in the wrong working directory.`,
+      );
+      process.exit(1);
+    }
+    log.ok(`Origin '${originSlug}' matches package '${expectedRepo}'.`);
+  }
+
   const localTags = await git.capture("tag", "--list", tag);
   if (localTags === tag) {
     log.fail(`Local tag ${tag} already exists. Delete with: git tag -d ${tag}`);
@@ -78,8 +100,14 @@ main(async () => {
 
   const changelog = await readChangelog();
   if (changelog) {
+    // Escape *every* regex metacharacter (including backslash) so a future
+    // pre-release tag like `1.0.0-rc.1+build.7` cannot smuggle a partial
+    // escape past us. The narrower `.replace(/\./g, "\\.")` form was flagged
+    // by CodeQL `js/incomplete-sanitization` because it doesn't double the
+    // backslash itself.
+    const escaped = pkg.version.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
     const re = new RegExp(
-      `^## \\[${pkg.version.replace(/\./g, "\\.")}\\][^\\n]*\\n([\\s\\S]*?)(?=^## \\[)`,
+      `^## \\[${escaped}\\][^\\n]*\\n([\\s\\S]*?)(?=^## \\[)`,
       "m",
     );
     const m = re.exec(changelog);
