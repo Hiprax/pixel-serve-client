@@ -33,6 +33,15 @@ npm install pixel-serve-client
 - React >= 18.0.0
 - React DOM >= 18.0.0
 
+> **`@types/react` compatibility.** The component's exported return type is
+> `ReactElement` (a named export of `react` itself), not `JSX.Element`.
+> `ReactElement` has been available from `@types/react` 16 through 19; the
+> `JSX` namespace-based named import only exists from `@types/react` 18.2.6
+> onward (and in all 19.x), so it would have quietly narrowed the honest
+> `react >=18.0.0` peer range above for anyone pinned to an older exact
+> `@types/react` version. This is a types-only change — no rendered output is
+> affected.
+
 ## Quick Start
 
 ### Basic Usage
@@ -99,10 +108,39 @@ const App = () => (
 | `userId`           | `string`                | `undefined`           | User ID for private folder access                   |
 | `fallbackSrc`      | `string`                | `undefined`           | Override source for fallback                        |
 | `dynamicDimension` | `boolean`               | `false`               | Don't apply fixed width/height styles               |
-| `className`        | `string`                | `undefined`           | CSS class for the image/picture                     |
-| `style`            | `CSSProperties`         | `undefined`           | Inline styles                                       |
+| `className`        | `string`                | `undefined`           | CSS class applied to the rendered `<img>`            |
+| `style`            | `CSSProperties`         | `undefined`           | Inline styles applied to the rendered `<img>`        |
 
 All standard `<img>` props (except `src` and `children`) are also supported and forwarded.
+
+> **`onError` composition.** A caller-supplied `onError` does not replace the
+> component's built-in graceful-fallback behavior — both run. The internal
+> handler always swaps in the bundled placeholder first, then your `onError`
+> fires with the same event. This holds for every render path (`direct`,
+> single-source, and the `<picture>` multi-source case), so the
+> graceful-fallback guarantee cannot be silently disabled by passing your own
+> handler. The same applies to `loading`: pass it explicitly to override the
+> `lazy`-derived default; omit it to keep the default behavior.
+
+> **`className`/`style` apply once.** Whether the component renders a single
+> `<img>` (`direct` mode or a single format source) or a multi-source
+> `<picture>` (the common case — `avif`/`webp` default to `true`), your
+> `className` and `style` land on exactly one element: the `<img>` that
+> actually paints the image. In the multi-source case, `<picture>` itself is
+> an unstyled, boxless wrapper (`display: contents`), so it never introduces
+> its own layout box. A decorative `style` (a border, margin, or background
+> color) therefore renders once, not twice.
+
+> **`format` is not a `Pixel` prop.** `SrcGeneratorOptions` — the type consumed
+> by the exported `buildPixelUrl`/`buildPixelSources` helpers — still has an
+> optional `format` field, but `PixelProps` deliberately excludes it
+> (`Omit<SrcGeneratorOptions, "format">`): the component's only functional
+> format input is `mimeType`. Passing `format` to `<Pixel>` never did anything
+> useful — the component read `mimeType`, not `format` — and the unused prop
+> used to spread into the DOM as an invalid `format="…"` attribute on `<img>`.
+> It is now both a compile-time type error on `<Pixel format="…">` and
+> stripped before it can reach the DOM even if forced through via an untyped
+> spread. Use `mimeType` to control the primary output format.
 
 ## Examples
 
@@ -231,6 +269,11 @@ const sources = buildPixelSources({
 //   { src: "...format=jpeg...", type: "image/jpeg" },
 // ]
 
+// When `mimeType` matches an enabled format flag, the flag's source is
+// skipped instead of duplicated — the primary entry already covers it.
+buildPixelSources({ src: "/image.jpg", avif: true, webp: true, mimeType: "webp" });
+// => [{ type: "image/avif", ... }, { type: "image/webp", ... }]  (2 sources, not 3)
+
 // Get MIME type for a format
 const mime = getMimeType("webp"); // => "image/webp"
 ```
@@ -311,6 +354,21 @@ import { buildPixelUrl, Skeleton } from "pixel-serve-client";
 const Pixel = require("pixel-serve-client").default;
 const { buildPixelUrl, Skeleton } = require("pixel-serve-client");
 ```
+
+> **`Pixel` named export.** `Pixel` is also available as a named export
+> (`export { default as Pixel }`), in addition to the default export shown
+> above — both resolve to the same component. This is purely additive for
+> CJS/tooling ergonomics (e.g. `const { Pixel } = require("pixel-serve-client")`
+> alongside other named imports like `Skeleton`); the default export is
+> unchanged and remains the primary, documented way to import the component.
+>
+> ```typescript
+> // ESM
+> import { Pixel } from "pixel-serve-client";
+>
+> // CommonJS
+> const { Pixel } = require("pixel-serve-client");
+> ```
 
 ## SSR Compatibility
 

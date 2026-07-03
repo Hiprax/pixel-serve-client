@@ -304,4 +304,46 @@ describe("buildPixelSources", () => {
     expect(sources).toHaveLength(1);
     expect(sources[0].type).toBe("image/jpeg");
   });
+
+  it("does not duplicate the avif source when mimeType is avif", () => {
+    const sources = buildPixelSources({
+      src: "/image.jpg",
+      mimeType: "avif",
+    });
+
+    expect(sources).toHaveLength(2);
+    const types = sources.map((s) => s.type);
+    expect(new Set(types).size).toBe(types.length);
+    expect(types.filter((t) => t === "image/avif")).toHaveLength(1);
+    expect(types).toContain("image/webp");
+  });
+
+  it("does not duplicate the webp source when mimeType is webp", () => {
+    const sources = buildPixelSources({
+      src: "/image.jpg",
+      mimeType: "webp",
+    });
+
+    expect(sources).toHaveLength(2);
+    const types = sources.map((s) => s.type);
+    expect(new Set(types).size).toBe(types.length);
+    expect(types.filter((t) => t === "image/webp")).toHaveLength(1);
+    expect(types).toContain("image/avif");
+  });
+
+  it("produces no duplicate type+src pair for any mimeType with both flags on", () => {
+    const formats: PixelFormat[] = [
+      "jpeg",
+      "png",
+      "webp",
+      "avif",
+      "gif",
+      "tiff",
+    ];
+    for (const mimeType of formats) {
+      const sources = buildPixelSources({ src: "/image.jpg", mimeType });
+      const keys = sources.map((s) => `${s.type}|${s.src}`);
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+  });
 });

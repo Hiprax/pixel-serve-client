@@ -17,12 +17,15 @@ export type SrcGeneratorOptions = {
   direct?: boolean;
 };
 
-export type PixelProps = SrcGeneratorOptions &
+export type PixelProps = Omit<SrcGeneratorOptions, "format"> &
   Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "children"> & {
     className?: string;
     alt?: string;
     /**
-     * Inline style applied to the rendered `<img>` or `<picture>` element.
+     * Inline style applied to the rendered `<img>` element. When multiple
+     * sources are rendered, the wrapping `<picture>` stays an unstyled,
+     * boxless container (`display: contents`) so this style and `className`
+     * take effect exactly once, on the `<img>`.
      *
      * Precedence rules:
      * - When `width`/`height` props are set and `dynamicDimension` is false,

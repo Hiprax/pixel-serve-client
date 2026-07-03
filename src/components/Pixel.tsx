@@ -6,7 +6,7 @@ import {
   memo,
   type CSSProperties,
 } from "react";
-import type { JSX } from "react";
+import type { ReactElement, SyntheticEvent } from "react";
 import type { PixelProps, PixelSource } from "../types";
 import Skeleton from "./Skeleton";
 import { buildPixelSources } from "../functions";
@@ -97,8 +97,19 @@ const Pixel = memo(
     fallbackSrc,
     crossOrigin,
     referrerPolicy,
-    ...props
-  }: PixelProps): JSX.Element => {
+    onError: userOnError,
+    loading,
+    ...rest
+  }: PixelProps): ReactElement => {
+    // `format` is no longer part of the public PixelProps type (`mimeType` is
+    // the one functional format prop — see types.ts), but an untyped caller
+    // can still pass it at runtime. Strip it defensively so it can never
+    // reach `...props` and leak onto the DOM <img> below.
+    const { format: _format, ...props } = rest as typeof rest & {
+      format?: unknown;
+    };
+    void _format;
+
     const [displayedSrcSet, setDisplayedSrcSet] = useState<PixelSource[]>(() =>
       eagerLoad
         ? buildPixelSources({
@@ -231,7 +242,20 @@ const Pixel = memo(
       }
     }, [type, avif, webp]);
 
-    const renderImage = (sourceList: PixelSource[]): JSX.Element | null => {
+    // Composes the internal graceful-fallback handler with any caller-supplied
+    // `onError`. Both `<img>` elements below render this instead of
+    // `handleImgError` directly and spread `{...props}` after it — since
+    // `onError` is destructured out of `props`, the caller's handler can no
+    // longer clobber the internal fallback (it now always runs first).
+    const onImgError = useCallback(
+      (event: SyntheticEvent<HTMLImageElement>): void => {
+        handleImgError();
+        userOnError?.(event);
+      },
+      [handleImgError, userOnError],
+    );
+
+    const renderImage = (sourceList: PixelSource[]): ReactElement | null => {
       if (!sourceList.length) return null;
       const fallback = sourceList[sourceList.length - 1]?.src ?? src;
 
@@ -246,18 +270,15 @@ const Pixel = memo(
             {...(crossOrigin ? { crossOrigin } : {})}
             {...(referrerPolicy ? { referrerPolicy } : {})}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
-            loading={lazy ? "lazy" : "eager"}
-            onError={handleImgError}
+            loading={loading ?? (lazy ? "lazy" : "eager")}
+            onError={onImgError}
             {...props}
           />
         );
       }
 
       return (
-        <picture
-          className={className}
-          style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
-        >
+        <picture style={{ display: "contents" }}>
           {sourceList.map((source) => (
             <source key={source.type} srcSet={source.src} type={source.type} />
           ))}
@@ -270,8 +291,8 @@ const Pixel = memo(
             {...(crossOrigin ? { crossOrigin } : {})}
             {...(referrerPolicy ? { referrerPolicy } : {})}
             style={imageLoaded ? imageStyle : { width: "1px", height: "1px" }}
-            loading={lazy ? "lazy" : "eager"}
-            onError={handleImgError}
+            loading={loading ?? (lazy ? "lazy" : "eager")}
+            onError={onImgError}
             {...props}
           />
         </picture>
