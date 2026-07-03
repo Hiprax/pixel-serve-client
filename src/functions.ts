@@ -60,13 +60,16 @@ export const buildPixelSources = ({
     ];
   }
   const sources: PixelSource[] = [];
-  if (avif) {
+  // The primary push below already covers `mimeType`, so skip the flag-driven
+  // source when it would duplicate the primary format (same src + type would
+  // otherwise produce a duplicate React key and a redundant DOM <source>).
+  if (avif && mimeType !== "avif") {
     sources.push({
       src: buildPixelUrl({ ...options, format: "avif" }),
       type: extensionMap.avif,
     });
   }
-  if (webp) {
+  if (webp && mimeType !== "webp") {
     sources.push({
       src: buildPixelUrl({ ...options, format: "webp" }),
       type: extensionMap.webp,
